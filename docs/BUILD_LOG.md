@@ -163,8 +163,43 @@ Implemented a deterministic rule evaluation engine (`app/sop_engine.py`) that ma
 - **Result**: 26 passed in 0.63s (7 Phase 2 tests + 8 Phase 3 tests + 11 Phase 4 tests).
 
 ### Current Status
-- **Phase 4 complete**: Deterministic SOP evaluation engine built, 100% test pass rate, verified with realistic weather payload smoke test.
+- **Phase 4 complete**.
+
+---
+
+## Phase 5 — LLM Layer
+
+### Overview
+Integrated Google Gemini (`langchain-google-genai`) for fuzzy SOP policy selection and grounded natural-language response composition. The LLM acts strictly as a selection and phrasing layer, maintaining verified weather facts and deterministic SOP engine results as the single source of truth.
+
+### Key Features & Components Implemented
+- **`app/llm.py`**:
+  - `build_weather_facts(weather)`: Filters weather inputs to a strict whitelist of 8 allowed metrics (`temperature_2m`, `apparent_temperature`, `precipitation`, `precipitation_probability`, `wind_speed_10m`, `wind_gusts_10m`, `uv_index`, `visibility`).
+  - `get_llm_model(model_name)`: Configures `ChatGoogleGenerativeAI` reading `GOOGLE_API_KEY` from environment variables.
+  - `select_fuzzy_sop(sops, user_request, weather)`: Passes candidate fuzzy SOPs (`trigger_type == "fuzzy"`) to Gemini to select the matching SOP ID or return `NONE`. Validates LLM response against supplied SOP candidates.
+  - `compose_response(user_request, weather_facts, selected_sop)`: Formulates concise, natural-language responses using strict grounding prompts (no invented weather values, no hallucinated safety policies, disclaimer preservation).
+  - `LLMError`: Custom exception wrapping Gemini/LangChain failures and missing credentials.
+- **`tests/test_llm.py`**: 9 automated unit tests using `unittest.mock` to test fact filtering, fuzzy candidate selection, valid/invalid SOP ID handling, response composition grounding, API error handling, and API key environment resolution without live network calls.
+- **`requirements.txt`**: Added `langchain-google-genai>=2.0.0`.
+
+### Key Architectural Decisions & Safety
+- **Strict Grounding**: The LLM is prohibited from generating arbitrary weather numbers or inventing unlisted policy advisories.
+- **Zero Hard-Coded Credentials**: `GOOGLE_API_KEY` is loaded dynamically from the environment. `.env` remains in `.gitignore`.
+- **Mocked Testing**: All automated tests run offline using mocks without consuming API quota or requiring live network access.
+
+### What Was Intentionally NOT Implemented
+- No LangGraph graph/workflow graph yet (deferred to Phase 6).
+- No Streamlit UI interface.
+- No session memory.
+
+### Test Results
+- Ran complete test suite: `.\.venv\Scripts\pytest.exe -v`
+- **Result**: 35 passed in 2.44s (7 Phase 2 + 8 Phase 3 + 11 Phase 4 + 9 Phase 5 tests).
+
+### Current Status
+- **Phase 5 complete**: Gemini LLM layer built, 100% mocked test pass rate, import smoke test verified.
 
 ### Next Phase
-- **Phase 5**: LLM / Agentic Integration (LangGraph workflow & Gemini reasoning).
+- **Phase 6**: LangGraph Agent Orchestration.
+
 
