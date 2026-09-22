@@ -212,3 +212,17 @@ def test_deterministic_match_not_overridden_by_fuzzy(mock_compose, mock_fuzzy, m
 
     mock_fuzzy.assert_not_called()
     assert result["selected_sop"]["id"] == "SOP-003"
+
+
+# 10. Focused Location Parsing Unit Tests
+@pytest.mark.parametrize("user_message,expected_location", [
+    ("Can I go for a walk in Delhi?", "Delhi"),
+    ("Can I go for a walk in Delhi, India?", "Delhi"),
+    ("Can I go cycling in Mumbai?", "Mumbai"),
+    ("What is the weather in Delhi?", "Delhi"),
+    ("Can I go for a picnic near Bengaluru?", "Bengaluru"),
+])
+def test_parse_request_location_extraction(user_message, expected_location):
+    from app.graph import parse_request_node
+    state = parse_request_node({"user_message": user_message})
+    assert state["location"] == expected_location
