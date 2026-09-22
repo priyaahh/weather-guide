@@ -166,3 +166,50 @@ def test_all_supported_operators():
     matched_ids = [s["id"] for s in matches]
 
     assert matched_ids == ["1", "2", "3", "4", "5"]
+
+
+# 12. Context relevance: Generic cycling does not select elderly SOP
+def test_generic_cycling_request_does_not_select_elderly_sop():
+    sop_elderly = {
+        "id": "SOP-007",
+        "name": "Elderly Heat Advisory",
+        "category": "vulnerable_groups",
+        "trigger_type": "numeric",
+        "severity": "high",
+        "conditions": {"field": "apparent_temperature", "operator": ">=", "value": 33.0}
+    }
+    sop_exercise = {
+        "id": "SOP-003",
+        "name": "Extreme Heat Exercise Advisory",
+        "category": "outdoor_exercise",
+        "trigger_type": "numeric",
+        "severity": "high",
+        "conditions": {"field": "apparent_temperature", "operator": ">=", "value": 35.0}
+    }
+    weather = {"apparent_temperature": 36.0}
+
+    # Generic request without "elderly"
+    matches = match_sops([sop_elderly, sop_exercise], weather, user_request="Cycling in Mumbai")
+    matched_ids = [s["id"] for s in matches]
+
+    assert "SOP-007" not in matched_ids
+    assert "SOP-003" in matched_ids
+
+
+# 13. Context relevance: Explicit elderly request allows elderly SOP
+def test_elderly_request_allows_elderly_sop():
+    sop_elderly = {
+        "id": "SOP-007",
+        "name": "Elderly Heat Advisory",
+        "category": "vulnerable_groups",
+        "trigger_type": "numeric",
+        "severity": "high",
+        "conditions": {"field": "apparent_temperature", "operator": ">=", "value": 33.0}
+    }
+    weather = {"apparent_temperature": 36.0}
+
+    # Explicit request with "elderly"
+    matches = match_sops([sop_elderly], weather, user_request="Walking for an elderly person in Mumbai")
+    assert len(matches) == 1
+    assert matches[0]["id"] == "SOP-007"
+

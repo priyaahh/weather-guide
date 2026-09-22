@@ -197,9 +197,50 @@ Integrated Google Gemini (`langchain-google-genai`) for fuzzy SOP policy selecti
 - **Result**: 35 passed in 2.44s (7 Phase 2 + 8 Phase 3 + 11 Phase 4 + 9 Phase 5 tests).
 
 ### Current Status
-- **Phase 5 complete**: Gemini LLM layer built, 100% mocked test pass rate, import smoke test verified.
+- **Phase 5 complete**.
+
+---
+
+## Phase 6 — LangGraph Orchestration
+
+### Overview
+Orchestrated all modules (Geocoding, Live Weather, SOP Policy Engine, and Gemini LLM Grounding) into a stateful, deterministic graph workflow using LangGraph (`StateGraph`).
+
+### Graph Structure & Routing Flow
+```text
+parse_request -> resolve_location
+                     ├── [location_error] -> location_error -> END
+                     └── [success]        -> fetch_weather
+                                                ├── [weather_error] -> weather_error -> END
+                                                └── [success]       -> match_sop
+                                                                         ├── [no_sop] -> no_sop -> END
+                                                                         └── [success] -> compose_response -> END
+```
+
+### Key Components Implemented
+- **`app/graph.py`**:
+  - `WeatherGuideState`: Strongly-typed `TypedDict` capturing `user_message`, `user_request`, `location`, `resolved_location`, `weather`, `matched_sop_ids`, `selected_sop`, `response`, and `error`.
+  - Node functions: `parse_request_node`, `resolve_location_node`, `fetch_weather_node`, `match_sop_node`, `compose_response_node`, `handle_location_error_node`, `handle_weather_error_node`, `handle_no_sop_response_node`.
+  - Conditional edge functions: `route_after_resolve_location`, `route_after_fetch_weather`, `route_after_match_sop`.
+  - Exact fallback error messages for location failure, weather API failure, and unmapped SOP queries.
+  - Multi-match severity prioritization (`critical` > `high` > `medium` > `low`) with YAML order tie-breaking.
+  - Deterministic SOP priority over fuzzy LLM selection (fuzzy SOPs queried only if zero deterministic matches exist).
+- **`tests/test_graph.py`**: 9 unit tests verifying deterministic flow, exact fallback error messages, multi-match severity selection, YAML tie-breaking, fuzzy selection fallbacks, and non-override guarantees without network calls.
+- **`requirements.txt`**: Added `langgraph>=0.2.0`.
+
+### What Was Intentionally NOT Implemented
+- No Streamlit frontend UI (deferred to Phase 7).
+- No session memory / checkpoint database storage.
+
+### Test Results
+- Ran complete test suite: `.\.venv\Scripts\pytest.exe -v`
+- **Result**: 44 passed in 4.14s (7 Phase 2 + 8 Phase 3 + 11 Phase 4 + 9 Phase 5 + 9 Phase 6 tests).
+
+### Current Status
+- **Phase 6 complete**: LangGraph workflow graph operational, 100% test pass rate, graph execution smoke test verified.
 
 ### Next Phase
-- **Phase 6**: LangGraph Agent Orchestration.
+- **Phase 7**: Streamlit UI & End-to-End Application Integration.
+
 
 
