@@ -1,0 +1,132 @@
+sops:
+  - id: "SOP-001"
+    name: "High UV Index Outdoor Exercise Advisory"
+    category: "outdoor_exercise"
+    trigger_type: "numeric"
+    conditions:
+      field: "uv_index"
+      operator: ">="
+      value: 8.0
+    severity: "medium"
+    advice: "High UV level detected. Limit direct sun exposure between 10 AM and 4 PM, wear SPF 30+ sunscreen, sunglasses, and a hat during outdoor workouts."
+
+  - id: "SOP-002"
+    name: "High Wind Cycling Safety Advisory"
+    category: "outdoor_exercise"
+    trigger_type: "numeric"
+    conditions:
+      field: "wind_speed_10m"
+      operator: ">="
+      value: 25.0
+    severity: "medium"
+    advice: "Strong winds detected. Cycling may be hazardous due to sudden gusts and reduced bike control. Exercise caution or opt for indoor cycling."
+
+  - id: "SOP-003"
+    name: "Extreme Heat Outdoor Exercise Advisory"
+    category: "outdoor_exercise"
+    trigger_type: "numeric"
+    conditions:
+      field: "apparent_temperature"
+      operator: ">="
+      value: 35.0
+    severity: "high"
+    advice: "High heat index. Strenuous outdoor exertion increases risk of heat exhaustion. Stay hydrated, schedule exercise early morning, or train indoors."
+
+  - id: "SOP-004"
+    name: "High Precipitation Probability Travel Advisory"
+    category: "travel"
+    trigger_type: "numeric"
+    conditions:
+      field: "precipitation_probability"
+      operator: ">="
+      value: 70.0
+    severity: "low"
+    advice: "High probability of rain during travel. Carry rain gear or an umbrella and anticipate localized traffic delays."
+
+  - id: "SOP-005"
+    name: "Heavy Rain and Strong Wind Travel Advisory"
+    category: "travel"
+    trigger_type: "compound"
+    conditions:
+      - field: "precipitation"
+        operator: ">="
+        value: 10.0
+      - field: "wind_gusts_10m"
+        operator: ">="
+        value: 40.0
+    severity: "high"
+    advice: "Compound weather risk: Significant rainfall combined with strong wind gusts. Driving conditions are hazardous. Reduce speed and maintain extra braking distance."
+
+  - id: "SOP-006"
+    name: "Low Visibility Travel Advisory"
+    category: "travel"
+    trigger_type: "numeric"
+    conditions:
+      field: "visibility"
+      operator: "<="
+      value: 1000.0
+    severity: "high"
+    advice: "Low visibility (<= 1000m) due to fog or heavy mist. Use low-beam headlights, reduce speed, and avoid high-speed maneuvers."
+
+  - id: "SOP-007"
+    name: "Extreme Heat Vulnerability Advisory for Elderly"
+    category: "vulnerable_groups"
+    trigger_type: "numeric"
+    conditions:
+      field: "apparent_temperature"
+      operator: ">="
+      value: 33.0
+    severity: "high"
+    advice: "Elevated heat index poses severe risks to elderly individuals. Ensure air-conditioned shelter, frequent hydration, and avoid outdoor activity during heat peak."
+
+  - id: "SOP-008"
+    name: "High UV Outdoor Protection Advisory for Children"
+    category: "vulnerable_groups"
+    trigger_type: "numeric"
+    conditions:
+      field: "uv_index"
+      operator: ">="
+      value: 5.0
+    severity: "medium"
+    advice: "Elevated UV levels pose skin and eye injury risks to young children. Apply SPF 50 sunscreen, use protective headwear, and keep children in shaded play areas."
+
+  - id: "SOP-009"
+    name: "High Heat Outdoor Safety Advisory for Pets"
+    category: "vulnerable_groups"
+    trigger_type: "numeric"
+    conditions:
+      field: "apparent_temperature"
+      operator: ">="
+      value: 30.0
+    severity: "high"
+    advice: "High heat index can cause paw burns on hot pavement and rapid heat stroke in pets. Avoid walking pets during peak hours, ensure fresh water, and never leave pets in parked vehicles."
+
+  - id: "SOP-010"
+    name: "Fuzzy Picnic Outdoor Comfort Advisory"
+    category: "leisure_general"
+    trigger_type: "fuzzy"
+    description: "Evaluates overall comfort for an outdoor picnic based on moderate temperature (18°C-26°C), low rain chance (<20%), and gentle wind (<15 km/h)."
+    severity: "low"
+    advice: "Fuzzy assessment for outdoor picnic: Conditions are favorable when mild temperatures align with low wind and low rain probability. If wind or rain increases, plan for covered shelter."
+
+  - id: "SOP-011"
+    name: "Fuzzy Good Day for a Walk Advisory"
+    category: "leisure_general"
+    trigger_type: "fuzzy"
+    description: "Evaluates general walkability based on comfortable apparent temperature (15°C-25°C), low UV index (<6), and dry conditions."
+    severity: "low"
+    advice: "Fuzzy assessment for outdoor walk: Pleasant conditions for a walk. Dress in comfortable layers and stay hydrated."
+
+  - id: "SOP-012"
+    name: "Severe Weather Proxy Advisory (Advisory Proxy)"
+    category: "leisure_general"
+    trigger_type: "compound"
+    conditions:
+      - field: "wind_gusts_10m"
+        operator: ">="
+        value: 60.0
+      - field: "precipitation"
+        operator: ">="
+        value: 25.0
+    severity: "critical"
+    advice: "CRITICAL WEATHER PROXY ADVISORY: High wind gusts and heavy rainfall detected. Remain indoors and secure outdoor property. DISCLAIMER: This is an automated advisory proxy based on weather data metrics, NOT an official IMD, government, or emergency agency warning."
