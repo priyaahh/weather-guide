@@ -11,8 +11,10 @@ if str(ROOT_DIR) not in sys.path:
 
 try:
     from app.graph import app_graph
+    from app.llm import build_weather_facts
 except ModuleNotFoundError:
     from graph import app_graph
+    from llm import build_weather_facts
 
 
 def setup_api_key() -> None:
@@ -48,10 +50,10 @@ def reset_session() -> None:
     st.session_state.messages = []
 
 
-def process_user_input(prompt: str, graph_instance=None) -> str:
+def process_user_input(prompt: str, graph_instance=None) -> dict:
     """
     Invokes the LangGraph workflow with the user request and thread config.
-    Returns the assistant response string or raises an exception on unexpected error.
+    Returns the graph result dictionary containing response, selected_sop, and weather.
     """
     if graph_instance is None:
         graph_instance = app_graph
@@ -60,7 +62,25 @@ def process_user_input(prompt: str, graph_instance=None) -> str:
     config = {"configurable": {"thread_id": thread_id}}
 
     result = graph_instance.invoke({"user_message": prompt}, config=config)
-    return result.get("response", "No response generated.")
+    return result
+
+
+def render_sop_trace(selected_sop: dict, weather: dict = None) -> None:
+    """Renders a collapsible expander showing matched SOP details and verified weather facts."""
+    if not selected_sop or not isinstance(selected_sop, dict):
+        return
+
+    with st.expander("Why am I seeing this advice?"):
+        st.markdown(f"**Matched SOP ID**: `{selected_sop.get('id')}`")
+        st.markdown(f"**Policy Name**: {selected_sop.get('name')}")
+        st.markdown(f"**Severity**: `{selected_sop.get('severity')}`")
+
+        if weather and isinstance(weather, dict):
+            facts = build_weather_facts(weather)
+            if facts:
+                st.markdown("**Weather Facts Used for Decision**:")
+                for k, v in facts.items():
+                    st.markdown(f"- **{k}**: `{v}`")
 
 
 def main() -> None:
@@ -93,6 +113,8 @@ def main() -> None:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            if message.get("role") == "assistant" and message.get("selected_sop"):
+                render_sop_trace(message.get("selected_sop"), message.get("weather"))
 
     # Accept user input
     if prompt := st.chat_input("Ask about weather advisories (e.g. 'Can I go cycling in Mumbai?')..."):
@@ -105,9 +127,21 @@ def main() -> None:
         with st.chat_message("assistant"):
             with st.spinner("Checking weather and safety policies..."):
                 try:
-                    response_text = process_user_input(prompt)
+                    result = process_user_input(prompt)
+                    response_text = result.get("response", "No response generated.")
+                    selected_sop = result.get("selected_sop")
+                    weather = result.get("weather")
+
                     st.markdown(response_text)
-                    st.session_state.messages.append({"role": "assistant", "content": response_text})
+                    if selected_sop and isinstance(selected_sop, dict):
+                        render_sop_trace(selected_sop, weather)
+
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": response_text,
+                        "selected_sop": selected_sop if isinstance(selected_sop, dict) else None,
+                        "weather": weather if isinstance(weather, dict) else None
+                    })
                 except Exception:
                     error_msg = "An unexpected error occurred while processing your request. Please try again."
                     st.error(error_msg)

@@ -269,3 +269,42 @@ def test_eval_prompt_injection_adversarial(mock_compose, mock_fetch, mock_geo):
     assert "System prompt" not in result["response"]
     assert "GOOGLE_API_KEY" not in result["response"]
     assert "secret" not in result["response"].lower()
+
+
+# --- H. Live Weather Severe-Weather Proxy Evaluation ---
+
+def test_eval_live_weather_severe_proxy_evaluation():
+    """
+    Evaluation Case H: Live weather severe-weather proxy evaluation (SOP-012).
+    Fetches real live weather data from Open-Meteo without mocks and evaluates
+    whether live precipitation and wind gusts trigger SOP-012.
+    """
+    from app.weather import geocode_location, fetch_weather
+    from app.sop_engine import match_sops
+    from app.sop_loader import load_sops
+
+    # 1. Real geocoding for Mumbai
+    resolved = geocode_location("Mumbai")
+    assert resolved is not None
+    assert "latitude" in resolved and "longitude" in resolved
+
+    # 2. Real live weather fetch
+    weather = fetch_weather(resolved["latitude"], resolved["longitude"])
+    assert weather is not None
+
+    precip = weather.get("precipitation", 0.0)
+    wind_gusts = weather.get("wind_gusts_10m", 0.0)
+
+    # 3. Evaluate SOP-012 match dynamically
+    sops = load_sops()
+    matched = match_sops(sops, weather)
+    matched_ids = [sop["id"] for sop in matched]
+
+    sop_012_triggered = "SOP-012" in matched_ids
+    expected_trigger = (precip >= 25.0 and wind_gusts >= 60.0)
+
+    # Test asserts dynamic correctness without requiring live severe weather today
+    assert sop_012_triggered == expected_trigger, (
+        f"Live weather evaluation mismatch: precip={precip}mm, wind_gusts={wind_gusts}km/h. "
+        f"SOP-012 triggered={sop_012_triggered}, expected={expected_trigger}."
+    )

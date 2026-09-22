@@ -7,7 +7,8 @@ from app.streamlit_app import (
     setup_api_key,
     init_session_state,
     reset_session,
-    process_user_input
+    process_user_input,
+    render_sop_trace
 )
 
 
@@ -55,15 +56,36 @@ def test_process_user_input_invokes_graph():
     thread_id = st.session_state.thread_id
 
     mock_graph = MagicMock()
-    mock_graph.invoke.return_value = {"response": "Mock advisory response."}
+    mock_graph.invoke.return_value = {
+        "response": "Mock advisory response.",
+        "selected_sop": {"id": "SOP-001", "name": "High UV", "severity": "medium"},
+        "weather": {"uv_index": 9.0}
+    }
 
-    response = process_user_input("Can I go cycling in Mumbai?", graph_instance=mock_graph)
+    result = process_user_input("Can I go cycling in Mumbai?", graph_instance=mock_graph)
 
     mock_graph.invoke.assert_called_once_with(
         {"user_message": "Can I go cycling in Mumbai?"},
         config={"configurable": {"thread_id": thread_id}}
     )
-    assert response == "Mock advisory response."
+    assert result["response"] == "Mock advisory response."
+    assert result["selected_sop"]["id"] == "SOP-001"
+
+
+def test_render_sop_trace_safe_execution():
+    """Verify render_sop_trace executes safely when selected_sop is None or valid."""
+    # 1. None / empty SOP does not crash and renders nothing
+    render_sop_trace(None, None)
+
+    # 2. Valid SOP renders without exception
+    with patch("streamlit.expander") as mock_expander:
+        mock_exp = MagicMock()
+        mock_expander.return_value.__enter__.return_value = mock_exp
+        render_sop_trace(
+            {"id": "SOP-001", "name": "High UV", "severity": "medium"},
+            {"uv_index": 9.0}
+        )
+        mock_expander.assert_called_once_with("Why am I seeing this advice?")
 
 
 def test_setup_api_key_env_copy():

@@ -114,6 +114,18 @@ This document presents the evaluation suite for the Weather Advisory Support Bot
 
 ---
 
+### Case H: Live Weather Severe-Weather Proxy Evaluation
+- **Case**: H — Live Unmocked Open-Meteo Weather Evaluation (SOP-012)
+- **Purpose**: Dynamically evaluate real-time live weather metrics (precipitation and wind gusts) against severe-weather proxy policy (`SOP-012`) without hardcoding numbers or fabricating severe weather.
+- **Input**: Real Open-Meteo geocoding for `"Mumbai"` and live forecast data.
+- **Setup / mock condition**: **No mocks used**. Real Open-Meteo REST API endpoint invoked dynamically during test execution.
+- **Expected result**: Returned live precipitation (`mm`) and wind gusts (`km/h`) are captured, and `SOP-012` severe proxy policy activation (`precipitation >= 25.0` and `wind_gusts_10m >= 60.0`) is dynamically evaluated against live conditions.
+- **Check performed**: Asserted `sop_012_triggered == (live_precipitation >= 25.0 and live_wind_gusts >= 60.0)`.
+- **Pass/Fail**: **PASS**
+- **Notes**: Severe-weather proxy policy activation is date- and weather-dependent based on real-time Open-Meteo meteorological conditions.
+
+---
+
 ## Evaluation Summary & Limitations
 
 ### Overall Results Summary
@@ -126,9 +138,11 @@ This document presents the evaluation suite for the Weather Advisory Support Bot
 | Location Failure | 1 | 1 | 0 | 100% |
 | Weather API Failure | 1 | 1 | 0 | 100% |
 | Adversarial Isolation | 1 | 1 | 0 | 100% |
-| **Total Evaluation Suite** | **9** | **9** | **0** | **100%** |
+| Live Weather Severe Proxy | 1 | 1 | 0 | 100% |
+| **Total Evaluation Suite** | **10** | **10** | **0** | **100%** |
 
 ### Honest System Limitations
-1. **Mocked Offline Testing**: Evaluation tests use deterministic mock inputs to ensure reliable, offline continuous integration. Live weather calls depend on real-time Open-Meteo API availability and geographic conditions.
-2. **Fuzzy Selection Boundary**: Fuzzy SOP evaluation relies on Gemini LLM classification when zero deterministic rules trigger. While deterministic rules take absolute priority, fuzzy classification depends on LLM availability.
-3. **Prompt-Injection Security Scope**: Case G verifies that adversarial text cannot alter the structured state graph routing or leak environment variables in the current workflow. However, this evaluation is an architectural check and does not constitute a formal external penetration audit.
+1. **Live Weather & Date Dependency**: Live weather evaluation (Case H) fetches real-time Open-Meteo data without mocks. Severe-weather proxy activation (`SOP-012`) is date-dependent based on active meteorological conditions in the requested region.
+2. **Mocked Offline Integration Tests**: Cases A–G use deterministic mock inputs to ensure reliable, offline continuous integration without network quota dependency.
+3. **Fuzzy Selection Boundary**: Fuzzy SOP evaluation relies on Gemini LLM classification when zero deterministic rules trigger. While deterministic rules take absolute priority, fuzzy classification depends on LLM availability.
+4. **Prompt-Injection Security Scope**: Case G verifies that adversarial text cannot alter the structured state graph routing or leak environment variables in the current workflow. However, this evaluation is an architectural check and does not constitute a formal external penetration audit.
