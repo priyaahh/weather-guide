@@ -266,8 +266,57 @@ Integrated in-memory conversation session state retention using LangGraph's `Mem
 ### Current Status
 - **Phase 7 complete**: In-memory session checkpointer integrated, 100% test pass rate, multi-turn state retention smoke test verified.
 
-### Next Phase
-- **Phase 8**: Streamlit UI & Final Application Assembly.
+---
+
+## Phase 8 — Streamlit Frontend UI & Final Assembly
+
+### Overview
+Built a clean, interactive Streamlit chat interface (`app/streamlit_app.py`) for the Weather Advisory Support Bot. Integrated the underlying LangGraph execution graph (`app_graph`) and in-memory `MemorySaver` session checkpointer, providing a chat-style experience with follow-up location retention and reset functionality.
+
+### Key Components & Implementations
+- **`app/streamlit_app.py`**:
+  - **Header & Info**: Title ("🌤️ Weather Advisory Support Bot") and clear explanation of functionality.
+  - **Chat Interface**: Streamlit `st.chat_message` and `st.chat_input` components for rendering user/assistant messages.
+  - **Session Memory Integration**:
+    - `st.session_state.thread_id`: Unique session UUID retained across user messages within the current Streamlit session. Passed to `app_graph.invoke(..., config={"configurable": {"thread_id": thread_id}})` to retain location and query context across turns via `MemorySaver`.
+    - `st.session_state.messages`: List storing chat turn objects (`role`, `content`) preserved across reruns.
+  - **Reset / New Conversation**:
+    - "New Conversation" button in sidebar that generates a new `thread_id` UUID and clears `st.session_state.messages`.
+  - **API Key & Secrets Handling**:
+    - `setup_api_key()`: Reads `GOOGLE_API_KEY` or `GEMINI_API_KEY` from `st.secrets` or `os.environ` without hardcoding keys or creating/committing `.streamlit/secrets.toml`.
+  - **Error Handling**:
+    - Graph fallback messages (`LOCATION_ERROR_MESSAGE`, `WEATHER_ERROR_MESSAGE`, `NO_SOP_ERROR_MESSAGE`) rendered directly as assistant responses.
+    - Unexpected UI layer exceptions caught and displayed via `st.error` without exposing Python tracebacks.
+  - **Path Resolution**: `sys.path` dynamically adjusted to support execution via both `streamlit run app/streamlit_app.py` and direct python module imports.
+- **`tests/test_streamlit_app.py`**:
+  - 5 automated unit tests verifying session state initialization, thread ID persistence across turns, reset button behavior, graph invocation payload alignment, and API key environment sync without running a live Streamlit server.
+- **`requirements.txt`**: Added `streamlit>=1.30.0`.
+
+### Files Created / Modified
+- **`app/streamlit_app.py`** [NEW]
+- **`tests/test_streamlit_app.py`** [NEW]
+- **`requirements.txt`** [MODIFY]
+- **`docs/BUILD_LOG.md`** [MODIFY]
+
+### How Session `thread_id` Works
+1. On initial page load, `init_session_state()` checks `st.session_state`. If `"thread_id"` is not present, it generates a new UUID string (`str(uuid.uuid4())`).
+2. When the user submits a message, `process_user_input` retrieves `st.session_state.thread_id` and passes it in the LangGraph config (`{"configurable": {"thread_id": thread_id}}`).
+3. LangGraph's `MemorySaver` checkpointer uses this `thread_id` to lookup state (e.g. `location`) from previous turns, allowing follow-up queries like *"What about this afternoon?"* to reuse the location resolved in turn 1 (*"Mumbai"*).
+4. When the user clicks "New Conversation", `reset_session()` replaces `st.session_state.thread_id` with a new UUID and clears `st.session_state.messages`, cleanly isolating the new thread.
+
+### Manual Verification Performed
+- **Server Startup**: Launched Streamlit server locally (`streamlit run app/streamlit_app.py`).
+- **Initial Load**: Verified title, description, sidebar, and empty chat state.
+- **First Turn Query**: Tested query `"Can I go cycling in Mumbai?"` -> Assistant returned appropriate advisory.
+- **Follow-up Query**: Tested follow-up `"What about this afternoon?"` -> Assistant retained Mumbai location context via `thread_id`.
+- **Reset Functionality**: Clicked "New Conversation" -> Chat history cleared and new `thread_id` assigned.
+
+### Test Results
+- Ran complete test suite: `.\.venv\Scripts\python.exe -m pytest`
+- **Result**: 55 passed in 3.30s (7 Phase 2 + 8 Phase 3 + 13 Phase 4 + 9 Phase 5 + 9 Phase 6 + 4 Phase 7 + 5 Phase 8 tests).
+
+### Current Status
+- **Phase 8 complete**: Streamlit UI frontend built and verified, session thread_id memory integrated, 100% test pass rate across 55 unit tests.
 
 
 
