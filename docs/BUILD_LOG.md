@@ -132,7 +132,39 @@ Built the live weather integration layer that resolves city/place names to geogr
 - **Result**: 15 passed in 0.81s (7 Phase 2 tests + 8 Phase 3 tests).
 
 ### Current Status
-- **Phase 3 complete**: Geocoding and weather API module built, tested with 100% mock coverage, live API connection verified.
+- **Phase 3 complete**.
+
+---
+
+## Phase 4 — Deterministic SOP Engine
+
+### Overview
+Implemented a deterministic rule evaluation engine (`app/sop_engine.py`) that matches weather metrics against declared SOP conditions in `data/sops.yaml` without relying on LLM logic.
+
+### Key Features Implemented
+- **Deterministic Condition Evaluation**: Evaluates numeric metrics using relational operators (`>=`, `<=`, `>`, `<`, `==`).
+- **Compound AND Semantics**: Evaluates list-based SOP conditions requiring all individual criteria to be `True`.
+- **Fuzzy SOP Handling**: Explicitly skips `fuzzy` trigger types for later LLM heuristic processing.
+- **Multiple Concurrent Matches**: Returns all matching SOPs rather than terminating at the first match.
+- **Deterministic Severity Ordering**: Sorts matches by severity (`critical` > `high` > `medium` > `low`) while preserving YAML definition order for equal severity.
+- **Fault-Tolerant Field Matching**: Missing or null weather fields evaluate to `False` without causing runtime exceptions.
+
+### Files Created & Modified
+- **`app/sop_engine.py`**: Deterministic SOP engine logic (`evaluate_condition`, `is_sop_matching`, `match_sops`).
+- **`tests/test_sop_engine.py`**: 11 automated unit tests covering all operators, compound AND logic, fuzzy skipping, severity sorting, and missing field handling.
+
+### What Was Intentionally NOT Implemented
+- No LLM / Gemini prompt integration.
+- No LangGraph state graph.
+- No Streamlit UI interface.
+
+### Test Results
+- Ran complete test suite: `.\.venv\Scripts\pytest.exe -v`
+- **Result**: 26 passed in 0.63s (7 Phase 2 tests + 8 Phase 3 tests + 11 Phase 4 tests).
+
+### Current Status
+- **Phase 4 complete**: Deterministic SOP evaluation engine built, 100% test pass rate, verified with realistic weather payload smoke test.
 
 ### Next Phase
-- **Phase 4**: SOP Evaluation Engine (matching live weather data against `data/sops.yaml` policy conditions).
+- **Phase 5**: LLM / Agentic Integration (LangGraph workflow & Gemini reasoning).
+
