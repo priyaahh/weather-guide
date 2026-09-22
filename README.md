@@ -6,7 +6,7 @@ A LangGraph-based weather advisory chatbot that combines live weather data from 
 
 ## Features
 
-- **Live Weather Lookup**: Fetches current weather metrics from the Open-Meteo API.
+- **Live Weather Lookup**: Fetches current/forecast weather metrics from the Open-Meteo API.
 - **Location Resolution**: Geocodes natural-language location queries via Open-Meteo Geocoding.
 - **Structured SOP Engine**: Evaluates 12 curated Standard Operating Procedures defined in `data/sops.yaml`.
 - **Deterministic & Compound Matching**: Matches numeric thresholds (e.g., UV >= 8.0, Apparent Temp >= 35°C) and multi-variable compound rules (e.g., Precipitation >= 10mm + Wind Gusts >= 40km/h).
@@ -58,7 +58,7 @@ Streamlit Response & SOP Trace Display
 
 ## Tech Stack
 
-- **Language**: Python 3.12+
+- **Language**: Python 3.10+ (tested on Python 3.12)
 - **Orchestration**: LangGraph (`langgraph>=0.2.0`)
 - **LLM Integration**: Gemini via `langchain-google-genai`
 - **Weather & Geocoding**: Open-Meteo REST APIs
@@ -165,7 +165,7 @@ pip install -r requirements.txt
 
 ---
 
-### 2. Backend Setup & Programmatic Execution
+### 2. Application Setup & Programmatic Execution
 
 The backend contains the compiled LangGraph workflow (`app/graph.py`), SOP engine (`app/sop_engine.py`), and evaluation test suite (`tests/`).
 
