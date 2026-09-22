@@ -221,6 +221,10 @@ def test_deterministic_match_not_overridden_by_fuzzy(mock_compose, mock_fuzzy, m
     ("Can I go cycling in Mumbai?", "Mumbai"),
     ("What is the weather in Delhi?", "Delhi"),
     ("Can I go for a picnic near Bengaluru?", "Bengaluru"),
+    ("Is it safe to cycle in Mumbai today?", "Mumbai"),
+    ("Can I go for a walk in Delhi today?", "Delhi"),
+    ("What is the weather in Delhi today?", "Delhi"),
+    ("Can I go for a picnic near Bengaluru tomorrow?", "Bengaluru"),
 ])
 def test_parse_request_location_extraction(user_message, expected_location):
     from app.graph import parse_request_node

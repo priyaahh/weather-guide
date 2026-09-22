@@ -41,12 +41,13 @@ def parse_request_node(state: WeatherGuideState) -> WeatherGuideState:
 
     if user_message:
         # Check if user message explicitly specifies a new location (preferring in, at, near over for)
-        match = re.search(r'\b(?:in|at|near)\s+([A-Za-z\s]+?)(?:\?|\.|$|,|for|with)', user_message, re.IGNORECASE)
+        match = re.search(r'\b(?:in|at|near)\s+([A-Za-z\s]+?)(?:\?|\.|$|,|for|with|today|tomorrow|this|now|tonight)', user_message, re.IGNORECASE)
         if not match:
-            match = re.search(r'\bfor\s+([A-Za-z\s]+?)(?:\?|\.|$|,|with)', user_message, re.IGNORECASE)
+            match = re.search(r'\bfor\s+([A-Za-z\s]+?)(?:\?|\.|$|,|with|today|tomorrow|this|now|tonight)', user_message, re.IGNORECASE)
 
         if match:
             extracted = match.group(1).strip()
+            extracted = re.sub(r'\s+\b(?:today|tomorrow|this\s+\w+|tonight|now)\b.*$', '', extracted, flags=re.IGNORECASE).strip()
             ignored = {"elderly", "children", "pets", "cycling", "walking", "picnic", "tomorrow", "today", "a walk", "a picnic", "a workout", "an exercise"}
             if len(extracted) > 1 and extracted.lower() not in ignored:
                 location = extracted
