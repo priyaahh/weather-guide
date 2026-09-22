@@ -1,5 +1,8 @@
 # Weather Advisory Support Bot
 
+- **Live Demo**: [https://wime-bot.streamlit.app/](https://wime-bot.streamlit.app/)
+- **GitHub Repository**: [https://github.com/priyaahh/weather-guide](https://github.com/priyaahh/weather-guide)
+
 A LangGraph-based weather advisory chatbot that combines live weather data from Open-Meteo, structured Standard Operating Procedures (SOPs), deterministic rule matching, and Gemini-based language understanding and response composition.
 
 ---
@@ -22,7 +25,7 @@ A LangGraph-based weather advisory chatbot that combines live weather data from 
 
 ---
 
-## Architecture
+## Architecture & Module Responsibilities
 
 ```text
 User Input
@@ -49,6 +52,14 @@ MemorySaver Checkpointer (Retain session state under thread_id)
 Streamlit Response & SOP Trace Display
 ```
 
+### Module Responsibilities
+- `app/streamlit_app.py`: Streamlit chat UI, session state management, and SOP traceability expander rendering.
+- `app/graph.py`: LangGraph stateful workflow definition, node functions, and conditional error branching.
+- `app/sop_loader.py`: Dynamically loads SOP policies from YAML so policy additions/changes do not require control-flow code changes.
+- `app/sop_engine.py`: Evaluates deterministic numeric and compound condition rules against weather data.
+- `app/weather.py`: Interacts with Open-Meteo REST APIs for geocoding and live weather metrics.
+- `app/llm.py`: Gemini model integration, fuzzy SOP selection fallback, and grounded response composition.
+
 ### Error Handling Branches
 - **Location Error**: `"I couldn't resolve that location. Please provide a valid city or location."`
 - **Weather API Error**: `"I couldn't retrieve the current weather right now. Please try again later."`
@@ -69,13 +80,27 @@ Streamlit Response & SOP Trace Display
 
 ---
 
-## SOP Design
+## SOP Design & Rationale
 
-Standard Operating Procedures are defined in `data/sops.yaml`. This decoupling allows policy rules to be updated or added without modifying application matching code.
+Standard Operating Procedures are defined in `data/sops.yaml`. This decoupling ensures policy rules can be updated or added without modifying application code.
 
+### Categories & Severity Distribution (12 SOPs Total)
+- **Categories (4)**: `outdoor_exercise`, `travel`, `vulnerable_groups`, `leisure_general`
+- **Severity Distribution**:
+  - `critical` (1): `SOP-012`
+  - `high` (5): `SOP-003`, `SOP-005`, `SOP-006`, `SOP-007`, `SOP-009`
+  - `medium` (3): `SOP-001`, `SOP-002`, `SOP-008`
+  - `low` (3): `SOP-004`, `SOP-010`, `SOP-011`
+
+### Matching Rules
 - **Deterministic SOPs** (`trigger_type: numeric` or `compound`): Evaluated first by `app/sop_engine.py` using Python comparison logic.
 - **Fuzzy SOPs** (`trigger_type: fuzzy`): Evaluated by Gemini LLM (`app/llm.py`) only when zero deterministic SOPs match.
 - **Multi-Match Resolution**: When multiple SOPs match, the engine selects the highest severity SOP (`critical` > `high` > `medium` > `low`), breaking ties using YAML declaration order.
+
+### Design Rationale
+- **Why YAML for SOPs**: Plain-text, diffable, and editable by non-engineers without touching Python — directly supports changing or adding a policy without touching application control-flow code.
+- **Why severity ranking instead of surfacing multiple matches**: A single authoritative answer avoids conflicting advice reaching the user; severity provides a deterministic, policy-owner-maintained tie-break mechanism.
+- **Severe-Weather Proxy (`SOP-012`)**: Triggered when `precipitation >= 25.0 mm AND wind_gusts_10m >= 60.0 km/h`. This is an automated severe-weather proxy based on Open-Meteo metrics, NOT an official IMD, government, or emergency agency warning.
 
 ---
 
@@ -118,16 +143,16 @@ Session continuity is powered by LangGraph's in-memory `MemorySaver` checkpointe
 
 Detailed evaluation documentation is available in [`docs/EVALUATION.md`](docs/EVALUATION.md).
 
-- **Total Test Suite**: **75 passed** (including 10 dedicated evaluation tests).
-- **Evaluation Categories Covered**:
-  - Deterministic SOP matches (High UV, High Rain Travel)
-  - Paraphrased query matching (Strong Sun Exposure, Downpour Driving)
-  - No-SOP fallback execution
-  - Multi-match severity precedence (`high` > `low`)
-  - Location resolution failure fallback
-  - Weather API network failure fallback
-  - Prompt injection and adversarial input isolation
-  - Live unmocked Open-Meteo weather evaluation (SOP-012)
+- **Total Test Suite**: **75 passed** (including 10 dedicated evaluation test cases).
+- **Evaluation Categories Covered (10 Named Cases)**:
+  - Cases A1 & A2: Deterministic SOP matches (High UV, High Rain Travel)
+  - Cases B1 & B2: Paraphrased query matching (Strong Sun Exposure, Downpour Driving)
+  - Case C: No-SOP fallback execution
+  - Case D: Multi-match severity precedence (`high` > `low`)
+  - Case E: Location resolution failure fallback
+  - Case F: Weather API network failure fallback
+  - Case G: Prompt injection and adversarial input isolation
+  - Case H: Live unmocked Open-Meteo weather evaluation (`SOP-012`)
 
 ---
 
@@ -175,6 +200,8 @@ Set your Gemini API Key in your terminal session for LLM operations:
 ```powershell
 $env:GOOGLE_API_KEY="your_actual_gemini_api_key_here"
 ```
+
+> **Security Note**: API key is read from an environment variable or Streamlit secret; `.env` and `.streamlit/secrets.toml` are gitignored and no API key is committed.
 
 #### Running Backend Invocation Programmatically
 You can invoke the compiled LangGraph backend directly via Python:
