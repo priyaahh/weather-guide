@@ -40,6 +40,7 @@ MOCK_SEVERE_WEATHER = {
 }
 
 
+
 # 1. Successful deterministic workflow & 10. Graph reaches END successfully
 @patch("app.graph.geocode_location")
 @patch("app.graph.api_fetch_weather")
@@ -54,7 +55,7 @@ def test_successful_deterministic_workflow(mock_compose, mock_fetch, mock_geo):
         "location": "Mumbai"
     }
 
-    result = app_graph.invoke(initial_state)
+    result = app_graph.invoke(initial_state, config={"configurable": {"thread_id": "test-1"}})
 
     assert result["response"] == "Stay hydrated and avoid high heat outdoor exertion."
     assert "SOP-003" in result["matched_sop_ids"]
@@ -71,7 +72,7 @@ def test_location_resolution_failure_fallback(mock_geo):
         "location": "UnknownCity9999"
     }
 
-    result = app_graph.invoke(initial_state)
+    result = app_graph.invoke(initial_state, config={"configurable": {"thread_id": "test-2"}})
 
     assert result["response"] == LOCATION_ERROR_MESSAGE
 
@@ -88,7 +89,7 @@ def test_weather_api_failure_fallback(mock_fetch, mock_geo):
         "location": "Mumbai"
     }
 
-    result = app_graph.invoke(initial_state)
+    result = app_graph.invoke(initial_state, config={"configurable": {"thread_id": "test-3"}})
 
     assert result["response"] == WEATHER_ERROR_MESSAGE
 
@@ -107,7 +108,7 @@ def test_no_sop_match_fallback(mock_fuzzy, mock_fetch, mock_geo):
         "location": "Mumbai"
     }
 
-    result = app_graph.invoke(initial_state)
+    result = app_graph.invoke(initial_state, config={"configurable": {"thread_id": "test-4"}})
 
     assert result["response"] == NO_SOP_ERROR_MESSAGE
 
@@ -130,7 +131,7 @@ def test_multiple_deterministic_matches_highest_severity(mock_compose, mock_fetc
     }
     mock_compose.return_value = "High rain and wind driving warning."
 
-    result = app_graph.invoke({"user_message": "Driving in Mumbai", "location": "Mumbai"})
+    result = app_graph.invoke({"user_message": "Driving in Mumbai", "location": "Mumbai"}, config={"configurable": {"thread_id": "test-5"}})
 
     assert result["selected_sop"]["severity"] == "high"
     assert result["selected_sop"]["id"] == "SOP-005"
@@ -155,7 +156,7 @@ def test_same_severity_first_yaml_order_selected(mock_compose, mock_fetch, mock_
     }
     mock_compose.return_value = "Medium warning response."
 
-    result = app_graph.invoke({"user_message": "Exercise in Mumbai", "location": "Mumbai"})
+    result = app_graph.invoke({"user_message": "Exercise in Mumbai", "location": "Mumbai"}, config={"configurable": {"thread_id": "test-6"}})
 
     assert result["selected_sop"]["id"] == "SOP-001"
 
@@ -177,7 +178,7 @@ def test_fuzzy_sop_selected_when_no_deterministic(mock_compose, mock_fuzzy, mock
     }
     mock_compose.return_value = "Picnic looks great today!"
 
-    result = app_graph.invoke({"user_message": "Can I go for a picnic in Mumbai?", "location": "Mumbai"})
+    result = app_graph.invoke({"user_message": "Can I go for a picnic in Mumbai?", "location": "Mumbai"}, config={"configurable": {"thread_id": "test-7"}})
 
     assert result["selected_sop"]["id"] == "SOP-010"
     assert result["response"] == "Picnic looks great today!"
@@ -192,7 +193,7 @@ def test_invalid_fuzzy_sop_id_routes_to_no_sop(mock_fuzzy, mock_fetch, mock_geo)
     mock_fetch.return_value = MOCK_NORMAL_WEATHER
     mock_fuzzy.return_value = None
 
-    result = app_graph.invoke({"user_message": "Picnic in Mumbai", "location": "Mumbai"})
+    result = app_graph.invoke({"user_message": "Picnic in Mumbai", "location": "Mumbai"}, config={"configurable": {"thread_id": "test-8"}})
 
     assert result["response"] == NO_SOP_ERROR_MESSAGE
 
@@ -207,7 +208,7 @@ def test_deterministic_match_not_overridden_by_fuzzy(mock_compose, mock_fuzzy, m
     mock_fetch.return_value = MOCK_SEVERE_WEATHER
     mock_compose.return_value = "High heat advisory."
 
-    result = app_graph.invoke({"user_message": "Exercise in Mumbai", "location": "Mumbai"})
+    result = app_graph.invoke({"user_message": "Exercise in Mumbai", "location": "Mumbai"}, config={"configurable": {"thread_id": "test-9"}})
 
     mock_fuzzy.assert_not_called()
     assert result["selected_sop"]["id"] == "SOP-003"

@@ -2,6 +2,7 @@ import re
 from typing import TypedDict, Optional, List, Dict, Any
 
 from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
 
 from app.sop_loader import load_sops
 from app.sop_engine import match_sops
@@ -29,27 +30,28 @@ class WeatherGuideState(TypedDict, total=False):
 def parse_request_node(state: WeatherGuideState) -> WeatherGuideState:
     """
     Node 1: Parses raw user message to extract user_request and location.
-    Does not invent locations.
+    Retains location from previous checkpoint if present on the same session thread.
+    Resets turn error state.
     """
     user_message = state.get("user_message", "").strip()
     user_request = state.get("user_request", user_message)
 
-    # If location is already provided in input state, keep it
+    # Retain location from previous checkpoint if present
     location = state.get("location", "").strip()
 
-    if not location and user_message:
-        # Simple extraction for common patterns: "in <City>", "at <City>", "for <City>"
+    if user_message:
+        # Check if user message explicitly specifies a new location
         match = re.search(r'\b(?:in|at|for|near)\s+([A-Za-z\s]+?)(?:\?|\.|$|,|for|with)', user_message, re.IGNORECASE)
         if match:
             extracted = match.group(1).strip()
-            # Avoid extracting non-location words
-            if len(extracted) > 1 and extracted.lower() not in {"elderly", "children", "pets", "cycling", "walking", "picnic"}:
+            if len(extracted) > 1 and extracted.lower() not in {"elderly", "children", "pets", "cycling", "walking", "picnic", "tomorrow", "today"}:
                 location = extracted
 
     return {
         "user_message": user_message,
         "user_request": user_request or user_message,
         "location": location,
+        "error": None
     }
 
 
@@ -191,10 +193,18 @@ def route_after_match_sop(state: WeatherGuideState) -> str:
     return "compose_response"
 
 
-def build_graph():
+# Shared in-memory checkpointer instance
+memory = MemorySaver()
+
+
+def build_graph(checkpointer=None):
     """
     Constructs and compiles the WeatherGuide LangGraph workflow graph.
+    Uses in-memory MemorySaver checkpointer for session state isolation.
     """
+    if checkpointer is None:
+        checkpointer = memory
+
     workflow = StateGraph(WeatherGuideState)
 
     # Add Nodes
@@ -247,7 +257,7 @@ def build_graph():
     workflow.add_edge("weather_error", END)
     workflow.add_edge("no_sop", END)
 
-    return workflow.compile()
+    return workflow.compile(checkpointer=checkpointer)
 
 
 # Export compiled graph instance
