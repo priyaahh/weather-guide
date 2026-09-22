@@ -16,7 +16,8 @@ A LangGraph-based weather advisory chatbot that combines live weather data from 
 - **LangGraph Branching Workflow**: Stateful orchestration with dedicated fallback nodes for location errors, weather API timeouts, and unmapped SOP requests.
 - **Session Memory (`MemorySaver`)**: In-memory state retention across turns via session `thread_id`, preserving location context while fetching fresh weather data on every turn.
 - **Streamlit Chat Interface**: Interactive chat UI with conversation history preservation and a single-click conversation reset.
-- **Evaluation Suite**: 9 deterministic evaluation tests and documentation covering deterministic matching, paraphrases, fallback accuracy, multi-match resolution, and adversarial input safety.
+- **Visible SOP Traceability**: Interactive expander in Streamlit ("Why am I seeing this advice?") displaying matched SOP ID, policy name, severity, and verified weather facts directly from API state.
+- **Evaluation Suite**: 10 evaluation tests (9 offline mocked tests + 1 live Open-Meteo test) and documentation covering deterministic matching, paraphrases, fallback accuracy, multi-match resolution, live weather severe proxy evaluation, and adversarial input safety.
 - **Graceful Failure Handling**: Returns exact assignment-mandated fallback messages on failures.
 
 ---
@@ -45,7 +46,7 @@ compose_response node (Gemini grounded natural-language composition)
   ↓
 MemorySaver Checkpointer (Retain session state under thread_id)
   ↓
-Streamlit Response Display
+Streamlit Response & SOP Trace Display
 ```
 
 ### Error Handling Branches
@@ -117,7 +118,7 @@ Session continuity is powered by LangGraph's in-memory `MemorySaver` checkpointe
 
 Detailed evaluation documentation is available in [`docs/EVALUATION.md`](docs/EVALUATION.md).
 
-- **Total Test Suite**: **64 passed** (including 9 dedicated evaluation tests).
+- **Total Test Suite**: **75 passed** (including 10 dedicated evaluation tests).
 - **Evaluation Categories Covered**:
   - Deterministic SOP matches (High UV, High Rain Travel)
   - Paraphrased query matching (Strong Sun Exposure, Downpour Driving)
@@ -126,6 +127,7 @@ Detailed evaluation documentation is available in [`docs/EVALUATION.md`](docs/EV
   - Location resolution failure fallback
   - Weather API network failure fallback
   - Prompt injection and adversarial input isolation
+  - Live unmocked Open-Meteo weather evaluation (SOP-012)
 
 ---
 
@@ -138,69 +140,83 @@ Detailed evaluation documentation is available in [`docs/EVALUATION.md`](docs/EV
 
 ---
 
-## Setup & Installation
+## Setup & Run Instructions
 
 ### Prerequisites
 - Python 3.10+ (tested on Python 3.12)
 - Git
 
-### Installation Steps (Windows PowerShell)
+### 1. Repository Setup & Environment Installation
+
+Clone the repository and install project dependencies in a virtual environment:
 
 ```powershell
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/priyaahh/weather-guide.git
 cd weather-guide
 
-# 2. Create and activate a virtual environment
+# Create and activate virtual environment (Windows PowerShell)
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# 3. Install required dependencies
+# Install required dependencies
 pip install -r requirements.txt
 ```
 
-### API Key Configuration
-
-Set your Gemini API Key in your terminal session before launching:
-
-```powershell
-$env:GOOGLE_API_KEY="your_gemini_api_key_here"
-```
-
-*Alternatively, Streamlit secrets (`.streamlit/secrets.toml`) are supported locally (do not commit secrets files).*
-
-### Running the Application
-
-Launch the Streamlit web app:
-
-```powershell
-streamlit run app/streamlit_app.py
-```
-
-Open `http://localhost:8501` in your browser.
-
 ---
 
-## Running Tests
+### 2. Backend Setup & Programmatic Execution
 
-Run the complete test suite:
+The backend contains the compiled LangGraph workflow (`app/graph.py`), SOP engine (`app/sop_engine.py`), and evaluation test suite (`tests/`).
+
+#### API Key Configuration
+Set your Gemini API Key in your terminal session for LLM operations:
+
+```powershell
+$env:GOOGLE_API_KEY="your_actual_gemini_api_key_here"
+```
+
+#### Running Backend Invocation Programmatically
+You can invoke the compiled LangGraph backend directly via Python:
+
+```powershell
+python -c "from app.graph import app_graph; print(app_graph.invoke({'user_message': 'Can I go cycling in Mumbai?'}, config={'configurable': {'thread_id': 'session-1'}}))"
+```
+
+#### Running Test Suite & Evaluation Suite
+Run the full test suite (75 tests):
 
 ```powershell
 pytest -q
 ```
 
-Expected output:
-```text
-64 passed in 2.43s
-```
-
-Run the evaluation test suite specifically:
+Run the evaluation test suite specifically (10 tests):
 
 ```powershell
 pytest tests/test_evaluation.py -v
 ```
 
-Expected output:
-```text
-9 passed in 1.90s
+---
+
+### 3. Frontend Setup & Web UI Execution
+
+The frontend is an interactive chat web app built with Streamlit ([`app/streamlit_app.py`](app/streamlit_app.py)).
+
+#### Launching the Frontend Web App
+Ensure your virtual environment is active and run:
+
+```powershell
+streamlit run app/streamlit_app.py
 ```
+
+#### Accessing the Web Interface
+Open your browser and navigate to:
+```text
+http://localhost:8501
+```
+
+#### Features in Frontend:
+- **Chat Input**: Enter natural language activity or weather queries.
+- **SOP Traceability**: Expand `"Why am I seeing this advice?"` under any assistant response to view matched SOP ID, policy name, severity, and verified weather facts.
+- **Session Memory**: Follow-up questions (e.g. *"What about this afternoon?"*) reuse location context.
+- **New Conversation**: Click `"New Conversation"` in the sidebar to reset session state and start fresh.
