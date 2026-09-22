@@ -46,7 +46,7 @@ A Standard Operating Procedure (SOP) represents a domain-specific advisory rule 
 - **Maintainability**: New advisories can be added or thresholds updated seamlessly by editing declarative YAML.
 
 ### The Three Trigger Types
-1. **`numeric`**: Single-field threshold comparison (e.g., `uv_index >= 6.0` or `visibility <= 1000.0`).
+1. **`numeric`**: Single-field threshold comparison (e.g., `uv_index >= 8.0` or `visibility <= 1000.0`).
 2. **`compound`**: Multi-condition evaluation requiring explicit **AND semantics** (all conditions must evaluate to `True` for the SOP to match).
 3. **`fuzzy`**: Qualitative or multi-variable comfort evaluation (e.g., picnic suitability or pleasant walk conditions) intended for LLM/heuristic reasoning.
 
@@ -90,14 +90,49 @@ Each SOP is assigned a severity rank (`low`, `medium`, `high`, `critical`). When
 - Added `pytest.ini` and `app/__init__.py` for seamless package resolution.
 
 ### What Was Intentionally NOT Implemented
-- No Open-Meteo weather API integration.
+- No Open-Meteo weather API integration (deferred to Phase 3).
 - No Google Gemini LLM integration.
 - No LangGraph agent state/graph implementation.
 - No Streamlit frontend user interface.
-- No rule matching or evaluation engine code yet (deferred to Phase 3).
+- No rule matching or evaluation engine code yet.
 
 ### Current Status
-- **Phase 2 complete**: All 12 SOP definitions created, loader built, unit tests passing 100%.
+- **Phase 2 complete**.
+
+---
+
+## Phase 3 — Live Weather Layer
+
+### Overview
+Built the live weather integration layer that resolves city/place names to geographical coordinates via the Open-Meteo Geocoding API and retrieves current weather conditions via the Open-Meteo Forecast API.
+
+### What Was Implemented
+- **`app/weather.py`**:
+  - `geocode_location(location: str)`: Resolves city names to latitude, longitude, and country metadata using `https://geocoding-api.open-meteo.com/v1/search`.
+  - `fetch_weather(latitude: float, longitude: float)`: Retrieves live weather data from `https://api.open-meteo.com/v1/forecast` containing exclusively the 8 required SOP weather fields (`temperature_2m`, `apparent_temperature`, `precipitation`, `precipitation_probability`, `wind_speed_10m`, `wind_gusts_10m`, `uv_index`, `visibility`).
+  - `get_weather_for_location(location: str)`: Helper function linking geocoding and weather retrieval.
+  - Custom hierarchy of exceptions (`WeatherError`, `LocationNotFoundError`, `WeatherAPIError`, `MalformedWeatherResponseError`).
+- **`tests/test_weather.py`**:
+  - 8 automated unit tests using `unittest.mock` to test geocoding success, location not found, weather response parsing, API HTTP/network errors, malformed responses, and input validation without external network dependency.
+- **`requirements.txt`**: Added `requests>=2.31.0` dependency.
+
+### Key Technical Decisions & Features
+- **Strict Metric Extraction**: Only requests and returns the exact 8 weather fields required by the SOP evaluation layer.
+- **Robust Exception Handling**: Differentiates between invalid location input (`ValueError`), missing locations (`LocationNotFoundError`), network/HTTP failures (`WeatherAPIError`), and bad API response formats (`MalformedWeatherResponseError`).
+- **Network-Isolated Testing**: All automated tests in `tests/test_weather.py` mock HTTP calls using `unittest.mock.patch`, ensuring fast, deterministic test execution without live API reliance.
+
+### What Was Intentionally NOT Implemented
+- No SOP evaluation engine matching logic.
+- No LangGraph workflow graph or state management.
+- No Google Gemini LLM prompt integration.
+- No Streamlit UI interface.
+
+### Test Results
+- Ran complete test suite: `.\.venv\Scripts\pytest.exe -v`
+- **Result**: 15 passed in 0.81s (7 Phase 2 tests + 8 Phase 3 tests).
+
+### Current Status
+- **Phase 3 complete**: Geocoding and weather API module built, tested with 100% mock coverage, live API connection verified.
 
 ### Next Phase
-- **Phase 3**: SOP Evaluation Engine & Weather Data Integration (or next planned module per workflow).
+- **Phase 4**: SOP Evaluation Engine (matching live weather data against `data/sops.yaml` policy conditions).
